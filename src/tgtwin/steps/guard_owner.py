@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tgtwin.core.models import Action, Context
+from tgtwin.core.models import Context
 
 
 class GuardOwnerStep:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from tgtwin.app import build_pipeline
 from tgtwin.core.models import Action, IncomingMessage
@@ -17,7 +17,7 @@ async def test_pipeline_smoke() -> None:
         message_id=10,
         text="привет",
         from_owner=False,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
     )
     from tgtwin.core.models import Context
 

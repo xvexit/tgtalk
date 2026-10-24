@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from tgtwin.core.models import Context, IncomingMessage
 from tgtwin.core.pipeline import Pipeline
@@ -25,7 +25,7 @@ async def test_stop_stops_pipeline() -> None:
         message_id=10,
         text="hi",
         from_owner=False,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
     )
     ctx = Context(msg=msg)
     pipeline = Pipeline([StopStep(), AfterStep()])
