@@ -1,8 +1,6 @@
 services:
   db:
     image: pgvector/pgvector:pg16
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -26,6 +24,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       SEND_ENABLED: ${SEND_ENABLED}
+      BOT_TOKEN: ${BOT_TOKEN}
       PYTHONPATH: /app/src
       PATH: /opt/venv/bin:/usr/local/bin:/usr/bin:/bin
     volumes:
@@ -33,7 +32,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["sleep", "infinity"]
+    command: sh -c "alembic upgrade head && python -m tgtwin"
     restart: unless-stopped
 
 volumes:
