@@ -2,7 +2,6 @@
 name = "tgtwin"
 version = "0.1.0"
 description = "Telegram Business AI secretary"
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
