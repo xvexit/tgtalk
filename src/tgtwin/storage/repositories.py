@@ -37,13 +37,13 @@ class PostgresMessageRepository(MessageRepository):
 
     async def last(self, chat_id: int, n: int) -> list[HistoryItem]:
         subq = (
-            select(Message)
+            select(Message.role, Message.text, Message.ts)
             .where(Message.chat_id == chat_id)
             .order_by(Message.ts.desc())
             .limit(n)
             .subquery()
         )
-        stmt = select(Message).from_statement(select(subq.c.role, subq.c.text, subq.c.ts).order_by(subq.c.ts.asc()))
+        stmt = select(subq.c.role, subq.c.text, subq.c.ts).order_by(subq.c.ts.asc())
         result = await self.session.execute(stmt)
         rows = result.all()
         items: list[HistoryItem] = []
