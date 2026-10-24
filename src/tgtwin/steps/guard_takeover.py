@@ -24,8 +24,8 @@ class GuardTakeoverStep:
         last = await self.repo.last_owner_ts(ctx.msg.chat_id)
         if last is None:
             return
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
+            last = last.replace(tzinfo=UTC)
         if now - last < timedelta(hours=hours):
             ctx.stop = True
