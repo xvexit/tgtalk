@@ -31,3 +31,5 @@ ENV/
 data/
 *.log
 .DS_Store
+.env
+.local/
