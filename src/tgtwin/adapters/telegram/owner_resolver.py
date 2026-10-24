@@ -20,12 +20,16 @@ class OwnerResolver:
         if connection_id in self._cache:
             return self._cache[connection_id]
         conn = await self.bot.get_business_connection(business_connection_id=connection_id)
-        owner_id = conn.user.id if conn and conn.user else None
-        info = OwnerInfo(owner_id=owner_id, user_chat_id=None)
+        owner_id = getattr(conn.user, "id", None) if conn and getattr(conn, "user", None) else None
+        user_chat_id = getattr(conn, "user_chat_id", None)
+        info = OwnerInfo(owner_id=owner_id, user_chat_id=user_chat_id)
         self._cache[connection_id] = info
         return info
 
-    def set_user_chat(self, connection_id: str, user_chat_id: int) -> None:
+    def set(self, connection_id: str, owner_id: int | None, user_chat_id: int | None) -> None:
         info = self._cache.get(connection_id) or OwnerInfo(owner_id=None, user_chat_id=None)
-        info.user_chat_id = user_chat_id
+        if owner_id is not None:
+            info.owner_id = owner_id
+        if user_chat_id is not None:
+            info.user_chat_id = user_chat_id
         self._cache[connection_id] = info

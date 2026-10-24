@@ -8,8 +8,6 @@ from tgtwin.core.models import IncomingMessage
 def aiogram_message_to_incoming(msg: Message, connection_id: str, from_owner: bool) -> IncomingMessage | None:
     if not msg.text:
         return None
-    if msg.business_connection_id and connection_id and msg.business_connection_id != connection_id:
-        pass
     return IncomingMessage(
         channel="telegram",
         connection_id=connection_id,

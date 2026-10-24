@@ -10,9 +10,6 @@ def setup_dispatcher(dp: Dispatcher, *routers) -> Dispatcher:
 
 
 ALLOWED_UPDATES = [
-    "message",
     "business_connection",
     "business_message",
-    "edited_business_message",
-    "deleted_business_messages",
 ]

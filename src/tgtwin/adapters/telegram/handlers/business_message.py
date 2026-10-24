@@ -5,13 +5,14 @@ from aiogram.types import Message
 
 from tgtwin.adapters.telegram.converter import aiogram_message_to_incoming
 from tgtwin.adapters.telegram.owner_resolver import OwnerResolver
-from tgtwin.core.models import Context
+from tgtwin.adapters.telegram.sender import DryRunSender
+from tgtwin.core.models import Action, Context
 from tgtwin.core.pipeline import Pipeline
 
 router = Router()
 
 
-def setup(bot, pipeline: Pipeline, resolver: OwnerResolver) -> Router:
+def setup(bot, pipeline: Pipeline, resolver: OwnerResolver, sender: DryRunSender) -> Router:
     @router.business_message()
     async def handle(msg: Message) -> None:
         bc_id = msg.business_connection_id or ""
@@ -22,4 +23,9 @@ def setup(bot, pipeline: Pipeline, resolver: OwnerResolver) -> Router:
             return
         ctx = Context(msg=incoming)
         await pipeline.run(ctx)
+        mode = ctx.cfg.mode.value if ctx.cfg else "dry_run"
+        if ctx.reply and not ctx.stop and mode != "off":
+            await sender.send(ctx.msg, ctx.reply, getattr(ctx, "delay", 0.0))
+        if ctx.action == Action.ESCALATE:
+            await sender.notify_owner(bc_id, "Эскалация")
     return router

@@ -4,7 +4,6 @@ import asyncio
 
 import pytest
 
-from tgtwin import __main__
 from tgtwin.config import Settings
 
 

@@ -16,6 +16,9 @@ def setup(bot, sender: DryRunSender, resolver: OwnerResolver) -> Router:
     @router.business_connection()
     async def handle(bc: BusinessConnection) -> None:
         if bc.id:
+            owner_id = getattr(bc.user, "id", None) if getattr(bc, "user", None) else None
+            user_chat_id = getattr(bc, "user_chat_id", None)
+            resolver.set(bc.id, owner_id, user_chat_id)
             if not bc.is_enabled:
                 try:
                     await sender.notify_owner(bc.id, "подключение отключено, проверь Premium")

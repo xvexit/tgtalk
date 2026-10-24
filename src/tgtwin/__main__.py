@@ -15,8 +15,9 @@ from tgtwin.app import build_pipeline
 from tgtwin.config import Settings
 from tgtwin.llm.fake import FakeLLMProvider
 from tgtwin.storage.db import get_sessionmaker
+from tgtwin.storage.repositories import PostgresMessageRepository
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 async def main() -> None:
@@ -28,10 +29,11 @@ async def main() -> None:
     resolver = OwnerResolver(bot)
     sender = DryRunSender(bot)
     llm = FakeLLMProvider()
-    get_sessionmaker(settings.DATABASE_URL)
-    pipeline = build_pipeline(llm)
+    sessionmaker = get_sessionmaker(settings.DATABASE_URL)
+    repo = PostgresMessageRepository(sessionmaker)
+    pipeline = build_pipeline(repo, llm, settings)
     dp.include_router(business_connection.setup(bot, sender, resolver))
-    dp.include_router(business_message.setup(bot, pipeline, resolver))
+    dp.include_router(business_message.setup(bot, pipeline, resolver, sender))
     await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
 
 
