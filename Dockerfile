@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm
+FROM ghcr.io/astral-sh/uv:0.4.30-python3.12-bookworm
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
@@ -9,6 +9,6 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --group dev
+RUN uv sync --frozen --group dev --no-install-project
 
 CMD ["sleep", "infinity"]
