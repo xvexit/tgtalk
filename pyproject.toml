@@ -9,6 +9,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.29",
     "alembic>=1.13",
+    "aiogram>=3.0,<4.0",
 ]
 
 [dependency-groups]
@@ -29,6 +30,9 @@ packages = ["src/tgtwin"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: tests requiring real Postgres",
+]
 
 [tool.ruff]
 line-length = 100
@@ -47,3 +51,7 @@ packages = ["tgtwin"]
 [[tool.mypy.overrides]]
 module = ["tgtwin.core.*"]
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["aiogram.*"]
+ignore_missing_imports = true
