@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Integer, Text, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -33,19 +42,25 @@ class Group(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mode: Mapped[str] = mapped_column(Text, nullable=False)
-    persona_id: Mapped[int | None] = mapped_column(Integer)
-    overrides: Mapped[str | None] = mapped_column(Text)
+    persona_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("personas.id", ondelete="SET NULL")
+    )
+    overrides: Mapped[dict | None] = mapped_column(JSONB)
 
 
 class Contact(Base):
     __tablename__ = "contacts"
 
-    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     display_name: Mapped[str | None] = mapped_column(Text)
-    group_id: Mapped[int | None] = mapped_column(Integer)
+    group_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("groups.id", ondelete="SET NULL")
+    )
     mode: Mapped[str | None] = mapped_column(Text)
-    persona_id: Mapped[int | None] = mapped_column(Integer)
-    overrides: Mapped[str | None] = mapped_column(Text)
+    persona_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("personas.id", ondelete="SET NULL")
+    )
+    overrides: Mapped[dict | None] = mapped_column(JSONB)
 
 
 class Persona(Base):
@@ -64,6 +79,6 @@ class ReplyLog(Base):
     trigger_message_id: Mapped[int | None] = mapped_column(Integer)
     mode: Mapped[str | None] = mapped_column(Text)
     reply: Mapped[str | None] = mapped_column(Text)
-    context: Mapped[str | None] = mapped_column(Text)
+    context: Mapped[dict | None] = mapped_column(JSONB)
     sent: Mapped[bool] = mapped_column(nullable=False, default=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

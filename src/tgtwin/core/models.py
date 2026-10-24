@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 
 class Action(StrEnum):
@@ -14,10 +13,17 @@ class Action(StrEnum):
     DRAFT = "DRAFT"
 
 
+class Mode(StrEnum):
+    OFF = "off"
+    DRY_RUN = "dry_run"
+    DRAFT = "draft"
+    AUTO = "auto"
+
+
 class ChatMessage(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    role: str
+    role: Literal["user", "assistant"]
     content: str
 
 
@@ -30,15 +36,15 @@ class IncomingMessage(BaseModel):
     message_id: int
     text: str | None
     from_owner: bool
-    ts: datetime
+    ts: AwareDatetime
 
 
 class HistoryItem(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    role: str
+    role: Literal["them", "owner", "bot"]
     text: str
-    ts: datetime
+    ts: AwareDatetime
 
 
 class Example(BaseModel):
@@ -51,7 +57,7 @@ class Example(BaseModel):
 class ResolvedConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    mode: str = "dry_run"
+    mode: Mode = Mode.DRY_RUN
     persona_id: int | None = None
     overrides: dict[str, Any] = {}
 
@@ -61,9 +67,9 @@ class StoredMessage(BaseModel):
 
     chat_id: int
     message_id: int
-    role: str
+    role: Literal["them", "owner", "bot"]
     text: str | None
-    ts: datetime
+    ts: AwareDatetime
     connection_id: str | None = None
 
 
