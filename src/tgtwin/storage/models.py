@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Integer, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -14,7 +14,7 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     tg_message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False)
     text: Mapped[str | None] = mapped_column(Text)
@@ -40,7 +40,7 @@ class Group(Base):
 class Contact(Base):
     __tablename__ = "contacts"
 
-    chat_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     display_name: Mapped[str | None] = mapped_column(Text)
     group_id: Mapped[int | None] = mapped_column(Integer)
     mode: Mapped[str | None] = mapped_column(Text)
@@ -60,7 +60,7 @@ class ReplyLog(Base):
     __tablename__ = "reply_log"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     trigger_message_id: Mapped[int | None] = mapped_column(Integer)
     mode: Mapped[str | None] = mapped_column(Text)
     reply: Mapped[str | None] = mapped_column(Text)

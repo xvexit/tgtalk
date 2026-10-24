@@ -29,7 +29,7 @@ def upgrade() -> None:
     )
     op.create_table(
         'contacts',
-        sa.Column('chat_id', sa.Integer(), nullable=False),
+        sa.Column('chat_id', sa.BigInteger(), nullable=False),
         sa.Column('display_name', sa.Text(), nullable=True),
         sa.Column('group_id', sa.Integer(), nullable=True),
         sa.Column('mode', sa.Text(), nullable=True),
@@ -47,7 +47,7 @@ def upgrade() -> None:
     op.create_table(
         'messages',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('chat_id', sa.Integer(), nullable=False),
+        sa.Column('chat_id', sa.BigInteger(), nullable=False),
         sa.Column('tg_message_id', sa.Integer(), nullable=False),
         sa.Column('role', sa.Text(), nullable=False),
         sa.Column('text', sa.Text(), nullable=True),
@@ -60,7 +60,7 @@ def upgrade() -> None:
     op.create_table(
         'reply_log',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('chat_id', sa.Integer(), nullable=False),
+        sa.Column('chat_id', sa.BigInteger(), nullable=False),
         sa.Column('trigger_message_id', sa.Integer(), nullable=True),
         sa.Column('mode', sa.Text(), nullable=True),
         sa.Column('reply', sa.Text(), nullable=True),
