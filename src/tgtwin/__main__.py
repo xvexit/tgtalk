@@ -28,15 +28,7 @@ async def main() -> None:
     resolver = OwnerResolver(bot)
     sender = DryRunSender(bot)
     llm = FakeLLMProvider()
-    sessionmaker = get_sessionmaker(settings.DATABASE_URL)
-    async with sessionmaker() as session:
-        repo = None
-        try:
-            from tgtwin.storage.repositories import PostgresMessageRepository
-
-            repo = PostgresMessageRepository(session)
-        except Exception:
-            repo = None
+    get_sessionmaker(settings.DATABASE_URL)
     pipeline = build_pipeline(llm)
     dp.include_router(business_connection.setup(bot, sender, resolver))
     dp.include_router(business_message.setup(bot, pipeline, resolver))
