@@ -19,13 +19,15 @@ services:
   bot:
     build: .
     user: "${UID:-1000}:${GID:-1000}"
+    network_mode: host
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}
       SEND_ENABLED: ${SEND_ENABLED}
       BOT_TOKEN: ${BOT_TOKEN}
       TAKEOVER_HOURS: ${TAKEOVER_HOURS:-3}
+      TELEGRAM_PROXY: ${TELEGRAM_PROXY:-}
       PYTHONPATH: /app/src
       PATH: /opt/venv/bin:/usr/local/bin:/usr/bin:/bin
     volumes:

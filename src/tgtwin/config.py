@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
     SEND_ENABLED: bool = False
     TAKEOVER_HOURS: int = 3
+    TELEGRAM_PROXY: str = ""
 
     @property
     def takeover_hours(self) -> int:
