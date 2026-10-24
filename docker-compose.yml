@@ -27,6 +27,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SEND_ENABLED: ${SEND_ENABLED}
       PYTHONPATH: /app/src
+      PATH: /opt/venv/bin:/usr/local/bin:/usr/bin:/bin
     volumes:
       - ./:/app
     depends_on:
