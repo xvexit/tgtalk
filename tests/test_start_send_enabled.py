@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from tgtwin import __main__
 from tgtwin.config import Settings
 
 
