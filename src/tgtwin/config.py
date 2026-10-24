@@ -9,4 +9,8 @@ class Settings(BaseSettings):
     BOT_TOKEN: str = ""
     DATABASE_URL: str = ""
     SEND_ENABLED: bool = False
-    takeover_hours: int = 3
+    TAKEOVER_HOURS: int = 3
+
+    @property
+    def takeover_hours(self) -> int:
+        return self.TAKEOVER_HOURS

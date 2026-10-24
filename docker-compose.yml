@@ -25,6 +25,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SEND_ENABLED: ${SEND_ENABLED}
       BOT_TOKEN: ${BOT_TOKEN}
+      TAKEOVER_HOURS: ${TAKEOVER_HOURS:-3}
       PYTHONPATH: /app/src
       PATH: /opt/venv/bin:/usr/local/bin:/usr/bin:/bin
     volumes:

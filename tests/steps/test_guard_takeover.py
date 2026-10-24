@@ -33,3 +33,21 @@ async def test_guard_takeover_stops() -> None:
     pipeline = Pipeline([GuardTakeoverStep(repo, default_hours=3)])
     res = await pipeline.run(ctx)
     assert res.stop is True
+
+
+@pytest.mark.asyncio
+async def test_guard_takeover_zero_disabled() -> None:
+    msg = IncomingMessage(
+        channel="telegram",
+        connection_id="c1",
+        chat_id=1,
+        message_id=2,
+        text="hi",
+        from_owner=False,
+        ts=datetime.now(UTC),
+    )
+    ctx = Context(msg=msg, cfg=ResolvedConfig())
+    repo = DummyRepo(datetime.now(UTC) - timedelta(hours=1))
+    pipeline = Pipeline([GuardTakeoverStep(repo, default_hours=0)])
+    res = await pipeline.run(ctx)
+    assert res.stop is False

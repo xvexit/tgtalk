@@ -19,11 +19,13 @@ class GuardTakeoverStep:
             h = ctx.cfg.overrides.get("takeover_hours")
             if isinstance(h, int):
                 hours = h
+        if hours == 0:
+            return
         last = await self.repo.last_owner_ts(ctx.msg.chat_id)
         if last is None:
             return
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         if last.tzinfo is None:
-            last = last.replace(tzinfo=UTC)
+            last = last.replace(tzinfo=timezone.utc)
         if now - last < timedelta(hours=hours):
             ctx.stop = True
