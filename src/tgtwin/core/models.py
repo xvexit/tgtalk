@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Any, Protocol
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 
-class Action(str, Enum):
+class Action(StrEnum):
     NONE = "NONE"
     REPLY = "REPLY"
     ESCALATE = "ESCALATE"
