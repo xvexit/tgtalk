@@ -26,6 +26,10 @@ class OwnerResolver:
         self._cache[connection_id] = info
         return info
 
+    def user_chat_id(self, connection_id: str) -> int | None:
+        info = self._cache.get(connection_id)
+        return info.user_chat_id if info else None
+
     def set(self, connection_id: str, owner_id: int | None, user_chat_id: int | None) -> None:
         info = self._cache.get(connection_id) or OwnerInfo(owner_id=None, user_chat_id=None)
         if owner_id is not None:

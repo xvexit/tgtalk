@@ -25,9 +25,7 @@ class BaseSender(Sender):
         try:
             user_chat_id = None
             if self.resolver is not None:
-                info = getattr(self.resolver, "_cache", {}).get(connection_id)
-                if info is not None:
-                    user_chat_id = getattr(info, "user_chat_id", None)
+                user_chat_id = self.resolver.user_chat_id(connection_id)
             if user_chat_id is None:
                 logger.warning("notify_owner_no_chat_id", extra={"connection_id": connection_id})
                 return
