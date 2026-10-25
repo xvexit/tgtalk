@@ -64,14 +64,20 @@ class TelegramBusinessSender(BaseSender):
         )
         message_id = getattr(sent, "message_id", None)
         if message_id is not None:
-            await self.repo.add(
-                StoredMessage(
-                    chat_id=msg.chat_id,
-                    message_id=message_id,
-                    role="bot",
-                    text=text,
-                    ts=datetime.now(UTC),
-                    connection_id=msg.connection_id,
+            try:
+                await self.repo.add(
+                    StoredMessage(
+                        chat_id=msg.chat_id,
+                        message_id=message_id,
+                        role="bot",
+                        text=text,
+                        ts=datetime.now(UTC),
+                        connection_id=msg.connection_id,
+                    )
                 )
-            )
+            except Exception:
+                logger.exception(
+                    "bot_message_record_failed",
+                    extra={"chat_id": msg.chat_id, "message_id": message_id},
+                )
         return message_id

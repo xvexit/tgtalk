@@ -71,3 +71,15 @@ async def test_send_exception_no_bot_row() -> None:
     with pytest.raises(RuntimeError):
         await sender.send(incoming(), "ответ", 0)
     assert repo.rows == {}
+
+
+async def test_repo_add_failure_still_returns_id(caplog) -> None:
+    class BrokenRepo:
+        async def add(self, msg):
+            raise RuntimeError("db down")
+
+    bot = DummyBot(next_message_id=321)
+    sender = TelegramBusinessSender(bot, BrokenRepo())
+    message_id = await sender.send(incoming(), "ответ", 0)
+    assert message_id == 321
+    assert "bot_message_record_failed" in caplog.text
