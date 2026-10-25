@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from tests.fakes import DummyBot, DummyChat, DummyMsg, FakeMessageRepo, FakeReplyLogRepo, FakeSender
 from tgtwin.adapters.telegram.handlers import business_message
@@ -9,6 +11,7 @@ from tgtwin.core.models import Action, Context, Mode, ResolvedConfig
 from tgtwin.core.pipeline import Pipeline
 from tgtwin.core.protocols import Step
 from tgtwin.steps.guard_owner import GuardOwnerStep
+from tgtwin.steps.guard_rate_limit import GuardRateLimitStep
 from tgtwin.steps.guard_takeover import GuardTakeoverStep
 from tgtwin.steps.record import RecordStep
 from tgtwin.steps.resolve_config import ResolveConfigStep
@@ -192,3 +195,45 @@ async def test_takeover_prevents_second_reply() -> None:
     await handler(them_msg(10))
     assert sender.sent == []
     assert sender.notified == []
+
+
+async def test_rate_limit_notifies_owner_once_per_hour(monkeypatch) -> None:
+    repo = FakeMessageRepo()
+    sender = FakeSender()
+    log_repo = FakeReplyLogRepo(sent_count=10)
+    clock = {"t": 10000.0}
+    monkeypatch.setattr(business_message, "_clock", lambda: clock["t"])
+    handler = make_router(
+        sender,
+        repo,
+        log_repo,
+        [ResolveConfigStep(), RecordStep(repo), GuardRateLimitStep(log_repo, max_per_hour=10)],
+    )
+    await handler(them_msg(10, full_name="Иван"))
+    assert sender.notified == [("bc1", "лимит ответов исчерпан: Иван")]
+    assert sender.sent == []
+    await handler(them_msg(11, full_name="Иван"))
+    assert len(sender.notified) == 1
+    clock["t"] += 3600
+    await handler(them_msg(12, full_name="Иван"))
+    assert len(sender.notified) == 2
+    assert sender.sent == []
+
+
+async def test_lock_acquired_around_pipeline(monkeypatch) -> None:
+    repo = FakeMessageRepo()
+    sender = FakeSender()
+    log_repo = FakeReplyLogRepo()
+    acquired: list[str] = []
+
+    class CountingLock(asyncio.Lock):
+        async def __aenter__(self):
+            acquired.append("enter")
+            return await super().__aenter__()
+
+    monkeypatch.setattr(business_message, "asyncio", SimpleNamespace(Lock=CountingLock))
+    handler = make_router(
+        sender, repo, log_repo, [ResolveConfigStep(), RecordStep(repo), ReplyStep()]
+    )
+    await handler(them_msg(10))
+    assert acquired == ["enter"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from time import monotonic as _clock
 
 from aiogram import Router
 from aiogram.types import Message
@@ -15,6 +16,8 @@ from tgtwin.core.protocols import ReplyLogRepository, Sender
 logger = logging.getLogger(__name__)
 router = Router()
 
+RATE_LIMIT_NOTIFY_INTERVAL = 3600.0
+
 
 def setup(
     bot,
@@ -24,6 +27,7 @@ def setup(
     log_repo: ReplyLogRepository,
 ) -> Router:
     locks: dict[int, asyncio.Lock] = {}
+    rate_limit_notified: dict[int, float] = {}
 
     @router.business_message()
     async def handle(msg: Message) -> None:
@@ -40,6 +44,13 @@ def setup(
             if ctx.action == Action.ESCALATE:
                 name = incoming.sender_name or "собеседник"
                 await sender.notify_owner(bc_id, f"тут нужен ты: {name}")
+            if ctx.meta.get("stopped_by") == "GuardRateLimitStep":
+                name = incoming.sender_name or "собеседник"
+                last = rate_limit_notified.get(incoming.chat_id, 0.0)
+                now = _clock()
+                if now - last >= RATE_LIMIT_NOTIFY_INTERVAL:
+                    rate_limit_notified[incoming.chat_id] = now
+                    await sender.notify_owner(bc_id, f"лимит ответов исчерпан: {name}")
             mode = ctx.cfg.mode.value if ctx.cfg else "off"
             if ctx.reply and not ctx.stop and mode != "off":
                 sent_id = None
