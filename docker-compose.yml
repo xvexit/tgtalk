@@ -32,6 +32,8 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
       LLM_MODEL: ${LLM_MODEL:-deepseek-flash}
       LLM_TIMEOUT: ${LLM_TIMEOUT:-20}
+      LLM_THINKING: ${LLM_THINKING:-false}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-800}
       HISTORY_LIMIT: ${HISTORY_LIMIT:-30}
       PERSONA_PATH: ${PERSONA_PATH:-config/persona.md}
       MAX_REPLIES_PER_HOUR: ${MAX_REPLIES_PER_HOUR:-10}

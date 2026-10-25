@@ -7,10 +7,10 @@ import pytest
 from openai import APITimeoutError, InternalServerError
 
 from tgtwin.core.models import ChatMessage
-from tgtwin.llm.openai_compat import LLM_MAX_TOKENS, OpenAICompatProvider
+from tgtwin.llm.openai_compat import OpenAICompatProvider
 
 
-def make_provider(handler) -> OpenAICompatProvider:
+def make_provider(handler, thinking_enabled: bool = False, max_tokens: int = 800) -> OpenAICompatProvider:
     transport = httpx2.MockTransport(handler)
     client = httpx2.AsyncClient(transport=transport)
     return OpenAICompatProvider(
@@ -19,6 +19,8 @@ def make_provider(handler) -> OpenAICompatProvider:
         model="test-model",
         timeout=5.0,
         http_client=client,
+        thinking_enabled=thinking_enabled,
+        max_tokens=max_tokens,
     )
 
 
@@ -35,7 +37,7 @@ async def test_generate_returns_content() -> None:
     assert result == "привет"
 
 
-async def test_payload_roles_and_system() -> None:
+async def test_payload_roles_system_max_tokens_and_thinking_disabled() -> None:
     captured = {}
 
     async def handler(request):
@@ -44,7 +46,7 @@ async def test_payload_roles_and_system() -> None:
             200, request=request, json={"choices": [{"message": {"content": "ок"}}]}
         )
 
-    provider = make_provider(handler)
+    provider = make_provider(handler, max_tokens=512)
     await provider.generate(
         "system prompt",
         [
@@ -54,12 +56,27 @@ async def test_payload_roles_and_system() -> None:
     )
     body = captured["body"]
     assert body["model"] == "test-model"
-    assert body["max_tokens"] == LLM_MAX_TOKENS
+    assert body["max_tokens"] == 512
+    assert body["thinking"] == {"type": "disabled"}
     assert body["messages"] == [
         {"role": "system", "content": "system prompt"},
         {"role": "user", "content": "вопрос"},
         {"role": "assistant", "content": "ответ"},
     ]
+
+
+async def test_thinking_enabled_omits_disabled_body() -> None:
+    captured = {}
+
+    async def handler(request):
+        captured["body"] = json.loads(request.content)
+        return httpx2.Response(
+            200, request=request, json={"choices": [{"message": {"content": "ок"}}]}
+        )
+
+    provider = make_provider(handler, thinking_enabled=True)
+    await provider.generate("s", [ChatMessage(role="user", content="вопрос")])
+    assert "thinking" not in captured["body"]
 
 
 async def test_empty_system_omitted() -> None:
@@ -76,13 +93,18 @@ async def test_empty_system_omitted() -> None:
     assert captured["body"]["messages"] == [{"role": "user", "content": "вопрос"}]
 
 
-async def test_empty_content_returns_empty() -> None:
+async def test_none_content_returns_none_and_finish_reason_saved() -> None:
     async def handler(request):
-        return httpx2.Response(200, request=request, json={"choices": [{"message": {"content": None}}]})
+        return httpx2.Response(
+            200,
+            request=request,
+            json={"choices": [{"message": {"content": None}, "finish_reason": "length"}]},
+        )
 
     provider = make_provider(handler)
     result = await provider.generate("s", [ChatMessage(role="user", content="вопрос")])
-    assert result == ""
+    assert result is None
+    assert provider.last_finish_reason == "length"
 
 
 async def test_api_error_propagates() -> None:

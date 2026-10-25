@@ -40,6 +40,8 @@ def choose_llm(settings: Settings) -> LLMProvider:
             base_url=settings.LLM_BASE_URL,
             model=settings.LLM_MODEL,
             timeout=settings.LLM_TIMEOUT,
+            max_tokens=settings.LLM_MAX_TOKENS,
+            thinking_enabled=settings.LLM_THINKING,
         )
     return FakeLLMProvider()
 

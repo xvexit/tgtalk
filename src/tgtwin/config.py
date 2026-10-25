@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-flash"
     LLM_TIMEOUT: float = 20.0
+    LLM_THINKING: bool = False
+    LLM_MAX_TOKENS: int = 800
     HISTORY_LIMIT: int = 30
     PERSONA_PATH: str = "config/persona.md"
     MAX_REPLIES_PER_HOUR: int = 10

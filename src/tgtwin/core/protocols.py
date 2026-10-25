@@ -18,7 +18,7 @@ class Step(Protocol):
 
 
 class LLMProvider(Protocol):
-    async def generate(self, system: str, messages: list[ChatMessage]) -> str: ...
+    async def generate(self, system: str, messages: list[ChatMessage]) -> str | None: ...
 
 
 class Sender(Protocol):  # реализация: Telegram; в тестах и dry-run: заглушка
