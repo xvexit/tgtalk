@@ -6,13 +6,13 @@ from aiogram import Router
 from aiogram.types import BusinessConnection
 
 from tgtwin.adapters.telegram.owner_resolver import OwnerResolver
-from tgtwin.adapters.telegram.sender import DryRunSender
+from tgtwin.core.protocols import Sender
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 
-def setup(bot, sender: DryRunSender, resolver: OwnerResolver) -> Router:
+def setup(bot, sender: Sender, resolver: OwnerResolver) -> Router:
     @router.business_connection()
     async def handle(bc: BusinessConnection) -> None:
         if bc.id:

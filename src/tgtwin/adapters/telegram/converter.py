@@ -8,6 +8,7 @@ from tgtwin.core.models import IncomingMessage
 def aiogram_message_to_incoming(msg: Message, connection_id: str, from_owner: bool) -> IncomingMessage | None:
     if not msg.text:
         return None
+    sender_name = getattr(msg.chat, "full_name", None) or getattr(msg.chat, "username", None)
     return IncomingMessage(
         channel="telegram",
         connection_id=connection_id,
@@ -16,4 +17,5 @@ def aiogram_message_to_incoming(msg: Message, connection_id: str, from_owner: bo
         text=msg.text,
         from_owner=from_owner,
         ts=msg.date,
+        sender_name=sender_name,
     )
