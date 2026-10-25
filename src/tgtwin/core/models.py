@@ -37,11 +37,13 @@ class IncomingMessage(BaseModel):
     text: str | None
     from_owner: bool
     ts: AwareDatetime
+    sender_name: str | None = None
 
 
 class HistoryItem(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    message_id: int
     role: Literal["them", "owner", "bot"]
     text: str
     ts: AwareDatetime
@@ -71,6 +73,18 @@ class StoredMessage(BaseModel):
     text: str | None
     ts: AwareDatetime
     connection_id: str | None = None
+
+
+class ReplyLogEntry(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    chat_id: int
+    trigger_message_id: int
+    mode: str
+    reply: str | None
+    sent: bool = False
+    context: dict[str, Any] = {}
+    ts: AwareDatetime | None = None
 
 
 class Context(BaseModel):

@@ -3,7 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from .models import ChatMessage, Context, HistoryItem, IncomingMessage, StoredMessage
+from .models import (
+    ChatMessage,
+    Context,
+    HistoryItem,
+    IncomingMessage,
+    ReplyLogEntry,
+    StoredMessage,
+)
 
 
 class Step(Protocol):
@@ -30,6 +37,18 @@ class MessageRepository(Protocol):  # реализация: storage/repositories
     async def last(self, chat_id: int, n: int) -> list[HistoryItem]: ...
 
     async def last_owner_ts(self, chat_id: int) -> datetime | None: ...
+
+    async def role_of(self, chat_id: int, message_id: int) -> str | None: ...
+
+
+class ReplyLogRepository(Protocol):  # реализация: storage/repositories.py (Postgres); тесты: in-memory
+    # add возвращает id записи (для mark_sent после реальной отправки)
+    async def add(self, entry: ReplyLogEntry) -> int: ...
+
+    async def mark_sent(self, log_id: int, sent: bool) -> None: ...
+
+    # число реально отправленных ответов в чате с момента since
+    async def count_sent_since(self, chat_id: int, since: datetime) -> int: ...
 
 
 class Embedder(Protocol):
