@@ -2,29 +2,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tests.fakes import FakeMessageRepo, FakeReplyLogRepo
 from tgtwin.app import build_pipeline
 from tgtwin.config import Settings
-from tgtwin.core.models import Action, IncomingMessage
+from tgtwin.core.models import Action, Context, IncomingMessage
 from tgtwin.llm.fake import FakeLLMProvider
-
-
-class DummyRepo:
-    async def add(self, msg):
-        return None
-
-    async def exists(self, chat_id: int, message_id: int):
-        return False
-
-    async def last(self, chat_id: int, n: int):
-        return []
-
-    async def last_owner_ts(self, chat_id: int):
-        return None
 
 
 async def test_pipeline_smoke() -> None:
     llm = FakeLLMProvider(response="ok")
-    pipeline = build_pipeline(DummyRepo(), llm, Settings())
+    repo = FakeMessageRepo()
+    log_repo = FakeReplyLogRepo()
+    pipeline = build_pipeline(repo, llm, Settings(), log_repo, persona_text="персона")
     msg = IncomingMessage(
         channel="telegram",
         connection_id="c1",
@@ -34,9 +23,10 @@ async def test_pipeline_smoke() -> None:
         from_owner=False,
         ts=datetime.now(UTC),
     )
-    from tgtwin.core.models import Context
-
     ctx = Context(msg=msg)
     result = await pipeline.run(ctx)
     assert result.reply == "ok"
     assert result.action == Action.REPLY
+    assert len(log_repo.entries) == 1
+    assert log_repo.entries[0][1].sent is False
+    assert log_repo.entries[0][1].context["model"] == "deepseek-flash"
