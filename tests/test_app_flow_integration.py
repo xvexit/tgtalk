@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
+from tests.fakes import DummyBot, DummyChat, DummyMsg
 from tgtwin.adapters.telegram.handlers import business_message
 from tgtwin.adapters.telegram.owner_resolver import OwnerResolver
 from tgtwin.adapters.telegram.sender import TelegramBusinessSender
@@ -15,7 +16,6 @@ from tgtwin.llm.fake import FakeLLMProvider
 from tgtwin.storage.db import get_sessionmaker
 from tgtwin.storage.models import Message, ReplyLog
 from tgtwin.storage.repositories import PostgresMessageRepository, PostgresReplyLogRepository
-from tests.fakes import DummyBot, DummyChat, DummyMsg
 
 OWNER_ID = 777
 
