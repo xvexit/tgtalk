@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from tgtwin.core.protocols import LLMProvider, MessageRepository, Step
+from tgtwin.core.protocols import LLMProvider, MessageRepository, ReplyLogRepository, Step
 
 _REGISTRY: dict[str, Callable[[], Step]] = {}
 
@@ -35,3 +35,15 @@ def register_postprocess() -> None:
     from tgtwin.steps.postprocess import PostprocessStep
 
     register("postprocess", lambda: PostprocessStep())
+
+
+def register_guard_rate_limit(log_repo: ReplyLogRepository, max_per_hour: int) -> None:
+    from tgtwin.steps.guard_rate_limit import GuardRateLimitStep
+
+    register("guard_rate_limit", lambda: GuardRateLimitStep(log_repo, max_per_hour))
+
+
+def register_log_reply(log_repo: ReplyLogRepository, model: str) -> None:
+    from tgtwin.steps.log_reply import LogReplyStep
+
+    register("log_reply", lambda: LogReplyStep(log_repo, model))
