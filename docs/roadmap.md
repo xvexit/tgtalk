@@ -23,6 +23,11 @@ ruff, mypy, pytest.
 **В рамках:** `OpenAICompatProvider`, `BuildContext` (персона + последние N), `LLMStep` с `[ESCALATE]`, `Postprocess` (задержка, typing), `log_reply`, включение `SEND_ENABLED=true`.
 **Вне рамок:** RAG, профили контактов.
 **Готово, когда:** юнит-тесты на `LLMStep` с фейковым провайдером; в одном выбранном чате бот отвечает; эскалация приходит владельцу; все ответы видны в `reply_log`.
+**Статус: выполнен.** `OpenAICompatProvider` (DeepSeek, `LLM_MAX_TOKENS`, таймаут), `BuildContextStep` (персона из `PERSONA_PATH`, `HISTORY_LIMIT`),
+`LLMStep` (роли them→user / owner, bot→assistant, склейка, `[ESCALATE]`), `PostprocessStep` (кавычки, 500 символов, задержка `min(1.5+0.05*len, 8)`, ссылки→эскалация),
+`LogReplyStep` (reply_log: ids истории, хэш персоны, модель), `GuardRateLimitStep` (`MAX_REPLIES_PER_HOUR` по `sent=true`),
+`TelegramBusinessSender` (typing, business_connection_id, запись `role=bot`), per-chat `asyncio.Lock` + лог эха, выбор отправителя по `SEND_ENABLED`,
+стартовые проверки (ключ и персона при `SEND_ENABLED=true`), уведомление «тут нужен ты: <имя>» при эскалации.
 
 ## Этап 3. Ingestion и оценочный стенд
 **Цель:** загрузка экспорта и измеримое качество.
