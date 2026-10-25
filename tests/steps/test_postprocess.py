@@ -58,10 +58,12 @@ async def test_empty_after_strip_stops() -> None:
     assert ctx.reply is None
 
 
-async def test_link_escalates() -> None:
+async def test_link_escalates(caplog) -> None:
     ctx = await run("зайди на https://example.com")
     assert ctx.action == Action.ESCALATE
     assert ctx.reply is None
+    reasons = [getattr(r, "escalate_reason", None) for r in caplog.records]
+    assert "link_or_mention" in reasons
 
 
 async def test_mention_escalates() -> None:

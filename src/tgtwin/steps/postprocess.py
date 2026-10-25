@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import re
 
 from tgtwin.core.models import Action, Context
+
+logger = logging.getLogger(__name__)
 
 QUOTE_PAIRS: dict[str, str] = {
     '"': '"',
@@ -39,6 +42,14 @@ class PostprocessStep:
             ctx.stop = True
             return
         if LINK_OR_MENTION_RE.search(text):
+            logger.warning(
+                "escalate",
+                extra={
+                    "chat_id": ctx.msg.chat_id,
+                    "message_id": ctx.msg.message_id,
+                    "escalate_reason": "link_or_mention",
+                },
+            )
             ctx.reply = None
             ctx.action = Action.ESCALATE
             return
