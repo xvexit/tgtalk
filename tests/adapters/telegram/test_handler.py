@@ -224,11 +224,11 @@ async def test_lock_acquired_around_pipeline(monkeypatch) -> None:
     repo = FakeMessageRepo()
     sender = FakeSender()
     log_repo = FakeReplyLogRepo()
-    acquired: list[str] = []
+    entered: list[object] = []
 
     class CountingLock(asyncio.Lock):
         async def __aenter__(self):
-            acquired.append("enter")
+            entered.append(self)
             return await super().__aenter__()
 
     monkeypatch.setattr(business_message, "asyncio", SimpleNamespace(Lock=CountingLock))
@@ -236,4 +236,6 @@ async def test_lock_acquired_around_pipeline(monkeypatch) -> None:
         sender, repo, log_repo, [ResolveConfigStep(), RecordStep(repo), ReplyStep()]
     )
     await handler(them_msg(10))
-    assert acquired == ["enter"]
+    await handler(them_msg(11))
+    assert len(entered) == 2
+    assert entered[0] is entered[1]
