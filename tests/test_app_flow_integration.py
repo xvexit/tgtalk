@@ -34,7 +34,7 @@ async def test_app_flow_integration() -> None:
     resolver.set("bc1", owner_id=OWNER_ID, user_chat_id=OWNER_ID)
     sender = TelegramBusinessSender(bot, repo, resolver)
     router = business_message.setup(bot, pipeline, resolver, sender, log_repo)
-    handler = router.observers["business_message"].handlers[0].callback
+    handler = router.observers["business_message"].handlers[-1].callback
     chat_id = 888124
     try:
         msg = DummyMsg(
