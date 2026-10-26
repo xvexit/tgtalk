@@ -28,6 +28,7 @@ venv/
 env/
 ENV/
 .env
+data/style_report.txt
 data/
 *.log
 .DS_Store
