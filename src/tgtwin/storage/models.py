@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -10,7 +11,9 @@ from sqlalchemy import (
     Integer,
     Text,
     UniqueConstraint,
+    func,
 )
+from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -29,10 +32,14 @@ class Message(Base):
     text: Mapped[str | None] = mapped_column(Text)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     connection_id: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=sa_text("'live'")
+    )
 
     __table_args__ = (
         UniqueConstraint("chat_id", "tg_message_id", name="uq_messages_chat_tg"),
         CheckConstraint("role IN ('them','owner','bot')", name="ck_messages_role"),
+        CheckConstraint("source IN ('live','import')", name="ck_messages_source"),
     )
 
 
@@ -82,3 +89,20 @@ class ReplyLog(Base):
     context: Mapped[dict | None] = mapped_column(JSONB)
     sent: Mapped[bool] = mapped_column(nullable=False, default=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Import(Base):
+    __tablename__ = "imports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    file_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    chats: Mapped[list[int]] = mapped_column(JSONB, nullable=False)
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    imported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("file_hash", "chats", name="uq_imports_file_hash_chats"),
+    )
