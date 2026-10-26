@@ -106,22 +106,28 @@ class Embedder(Protocol):
 
 | Таблица | Поля (основные) |
 |---|---|
-| `messages` | id, chat_id, tg_message_id, role (`them`/`owner`/`bot`), text, ts, connection_id, UNIQUE(chat_id, tg_message_id) |
+| `messages` | id, chat_id, tg_message_id, role (`them`/`owner`/`bot`), text, ts, connection_id, source (`live`/`import`), UNIQUE(chat_id, tg_message_id) |
 | `groups` | id, name, mode, persona_id, overrides jsonb |
 | `contacts` | chat_id PK, display_name, group_id, mode, persona_id, overrides jsonb |
 | `personas` | id, name, system_prompt |
 | `style_profiles` | id, scope (`global`/`chat:<id>`), text, built_at |
 | `chunks` | id, chat_id, text, started_at, embedding vector(N) — этап RAG, размерность зависит от модели |
 | `reply_log` | id, chat_id, trigger_message_id, mode, reply, context jsonb, sent bool, ts |
-| `imports` | id, file_hash, imported_at — идемпотентность загрузки экспорта |
+| `imports` | id, file_hash, filename, chats jsonb, stats jsonb, imported_at, UNIQUE(file_hash, chats) — идемпотентность загрузки экспорта |
 
 Схема меняется только миграциями Alembic.
 
 ## Ingestion
 
-Парсер `result.json` из Telegram Desktop: `text` бывает строкой или списком фрагментов; пропускать сервисные
-сообщения; учитывать пересылки, стикеры, голосовые. Разметка ролей `owner`/`them` по `from_id` владельца.
-Нарезка на «диалоги» по паузе (например, 6 часов). Загрузка идемпотентна (хэш файла + UNIQUE по сообщению).
+Парсер `result.json` из Telegram Desktop: `text` бывает строкой или списком фрагментов; сервисные сообщения,
+пересылки и сообщения без текста пропускаются. Поддержаны полный экспорт (`personal_chats.list`/`chats.list`) и
+экспорт одного чата (корневой `messages`). Владелец определяется по `personal_information.user_id`, иначе по
+`--owner-id`; роли `owner`/`them` — по `from_id`.
+В каждом чате импортируются только сообщения старше самого раннего `source='live'`; импортированные получают
+`source='import'`. Загрузка идемпотентна (хэш файла + набор выбранных чатов + UNIQUE по сообщению).
+`list` по умолчанию сортирует по числу сообщений владельца и показывает 40 строк; доступны `--sort mine|total|last`,
+`--min-mine`, `--limit`; имена чатов выводятся только с `--names`.
+Нарезка на «диалоги» по паузе (например, 6 часов) — этап 4.
 
 ## Оценка качества
 
