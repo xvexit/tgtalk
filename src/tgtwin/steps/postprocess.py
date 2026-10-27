@@ -16,6 +16,8 @@ QUOTE_PAIRS: dict[str, str] = {
     "„": "“",
 }
 LINK_OR_MENTION_RE = re.compile(r"https?://\S+|t\.me/\S+|@[A-Za-z0-9_]{2,}")
+MAX_REPLIES = 3
+MAX_REPLY_CHARS = 200
 
 
 def strip_quotes(text: str) -> str:
@@ -26,11 +28,28 @@ def strip_quotes(text: str) -> str:
 
 
 def delay_for(text: str) -> float:
-    return min(1.5 + 0.05 * len(text), 8.0)
+    return min(1.0 + 0.04 * len(text), 5.0)
+
+
+def split_replies(text: str, max_replies: int = MAX_REPLIES) -> list[str]:
+    replies: list[str] = []
+    for raw_line in text.splitlines():
+        line = strip_quotes(raw_line.strip())
+        if line and line[0] in QUOTE_PAIRS:
+            line = line[1:].strip()
+        if line and line[-1] in QUOTE_PAIRS.values():
+            line = line[:-1].strip()
+        if not line:
+            continue
+        replies.append(line[:MAX_REPLY_CHARS])
+        if len(replies) >= max_replies:
+            break
+    return replies
 
 
 class PostprocessStep:
-    def __init__(self, max_chars: int = 500) -> None:
+    def __init__(self, max_replies: int = MAX_REPLIES, max_chars: int = MAX_REPLY_CHARS) -> None:
+        self.max_replies = max_replies
         self.max_chars = max_chars
 
     async def handle(self, ctx: Context) -> None:
@@ -53,6 +72,13 @@ class PostprocessStep:
             ctx.reply = None
             ctx.action = Action.ESCALATE
             return
-        text = text[: self.max_chars]
-        ctx.reply = text
-        ctx.meta["delay"] = delay_for(text)
+        replies = split_replies(text, self.max_replies)
+        if not replies:
+            ctx.reply = None
+            ctx.stop = True
+            return
+        replies = [reply[: self.max_chars] for reply in replies]
+        ctx.reply = "\n".join(replies)
+        ctx.meta["replies"] = replies
+        ctx.meta["delays"] = [delay_for(reply) for reply in replies]
+        ctx.meta["delay"] = ctx.meta["delays"][0]

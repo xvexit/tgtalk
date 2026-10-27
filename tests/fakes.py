@@ -99,7 +99,9 @@ class DummyBot:
     async def send_message(self, *args, **kwargs) -> DummySent:
         self.send_message_calls += 1
         self.last_send_kwargs = kwargs
-        return DummySent(self.next_message_id)
+        message_id = self.next_message_id
+        self.next_message_id += 1
+        return DummySent(message_id)
 
     async def get_business_connection(self, *args, **kwargs):
         return None

@@ -53,18 +53,30 @@ def setup(
                     await sender.notify_owner(bc_id, f"лимит ответов исчерпан: {name}")
             mode = ctx.cfg.mode.value if ctx.cfg else "off"
             if ctx.reply and not ctx.stop and mode != "off":
-                sent_id = None
-                try:
-                    sent_id = await sender.send(ctx.msg, ctx.reply, ctx.meta.get("delay", 0.0))
-                except Exception:
-                    logger.exception(
-                        "send_failed",
-                        extra={
-                            "chat_id": ctx.msg.chat_id,
-                            "message_id": ctx.msg.message_id,
-                        },
-                    )
-                if sent_id is not None and ctx.meta.get("reply_log_id") is not None:
-                    await log_repo.mark_sent(ctx.meta["reply_log_id"], True)
+                parts = ctx.meta.get("replies")
+                if not isinstance(parts, list) or not parts:
+                    parts = [ctx.reply]
+                parts = [str(part) for part in parts]
+                delays = ctx.meta.get("delays")
+                if not isinstance(delays, list) or len(delays) != len(parts):
+                    delays = [float(ctx.meta.get("delay", 0.0))] * len(parts)
+                for index, (part, delay) in enumerate(zip(parts, delays, strict=True)):
+                    try:
+                        sent_id = await sender.send(ctx.msg, part, delay)
+                    except Exception:
+                        logger.exception(
+                            "send_failed",
+                            extra={
+                                "chat_id": ctx.msg.chat_id,
+                                "message_id": ctx.msg.message_id,
+                                "reply_index": index,
+                                "reply_count": len(parts),
+                            },
+                        )
+                        break
+                    if index == 0 and sent_id is not None:
+                        log_id = ctx.meta.get("reply_log_id")
+                        if log_id is not None:
+                            await log_repo.mark_sent(log_id, True)
 
     return router

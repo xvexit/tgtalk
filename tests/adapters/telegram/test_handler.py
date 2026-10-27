@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from tests.fakes import DummyBot, DummyChat, DummyMsg, FakeMessageRepo, FakeReplyLogRepo, FakeSender
 from tgtwin.adapters.telegram.handlers import business_message
 from tgtwin.adapters.telegram.owner_resolver import OwnerResolver
+from tgtwin.adapters.telegram.sender import TelegramBusinessSender
 from tgtwin.core.models import Action, Context, Mode, ResolvedConfig
 from tgtwin.core.pipeline import Pipeline
 from tgtwin.core.protocols import Step
@@ -34,6 +35,15 @@ class ReplyStep(Step):
 class RaisingSender(FakeSender):
     async def send(self, msg, text: str, delay: float) -> int | None:
         raise RuntimeError("telegram error")
+
+
+class SeriesStep(Step):
+    async def handle(self, ctx: Context) -> None:
+        ctx.reply = "раз\nдва\nтри"
+        ctx.meta["replies"] = ["раз", "два", "три"]
+        ctx.meta["delays"] = [1.0, 2.0, 3.0]
+        ctx.meta["reply_log_id"] = 7
+        ctx.action = Action.REPLY
 
 
 def make_router(sender, repo, log_repo, steps):
@@ -239,3 +249,106 @@ async def test_lock_acquired_around_pipeline(monkeypatch) -> None:
     await handler(them_msg(11))
     assert len(entered) == 2
     assert entered[0] is entered[1]
+
+
+async def test_series_sends_each_part_and_marks_sent_once() -> None:
+    repo = FakeMessageRepo()
+    sender = FakeSender()
+    log_repo = FakeReplyLogRepo()
+    handler = make_router(
+        sender, repo, log_repo, [ResolveConfigStep(), RecordStep(repo), SeriesStep()]
+    )
+
+    await handler(them_msg(10))
+
+    assert [text for _, text, _ in sender.sent] == ["раз", "два", "три"]
+    assert [delay for _, _, delay in sender.sent] == [1.0, 2.0, 3.0]
+    assert log_repo.marked == [(7, True)]
+
+
+async def test_series_mid_error_stops_remaining(caplog) -> None:
+    class FailSecondSender(FakeSender):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts = 0
+
+        async def send(self, msg, text: str, delay: float) -> int | None:
+            self.attempts += 1
+            if self.attempts == 2:
+                raise RuntimeError("telegram error")
+            self.sent.append((msg, text, delay))
+            return 12345
+
+    repo = FakeMessageRepo()
+    sender = FailSecondSender()
+    log_repo = FakeReplyLogRepo()
+    handler = make_router(
+        sender, repo, log_repo, [ResolveConfigStep(), RecordStep(repo), SeriesStep()]
+    )
+
+    await handler(them_msg(10))
+
+    assert [text for _, text, _ in sender.sent] == ["раз"]
+    assert sender.attempts == 2
+    assert log_repo.marked == [(7, True)]
+    assert "send_failed" in caplog.text
+
+
+async def test_series_keeps_lock_for_all_parts(monkeypatch) -> None:
+    repo = FakeMessageRepo()
+    log_repo = FakeReplyLogRepo()
+    active = {"count": 0}
+    seen: list[int] = []
+
+    class TrackingLock(asyncio.Lock):
+        async def __aenter__(self):
+            active["count"] += 1
+            return await super().__aenter__()
+
+        async def __aexit__(self, *args):
+            active["count"] -= 1
+            return await super().__aexit__(*args)
+
+    class LockAwareSender(FakeSender):
+        async def send(self, msg, text: str, delay: float) -> int | None:
+            seen.append(active["count"])
+            return await super().send(msg, text, delay)
+
+    monkeypatch.setattr(business_message, "asyncio", SimpleNamespace(Lock=TrackingLock))
+    handler = make_router(
+        LockAwareSender(), repo, log_repo, [ResolveConfigStep(), RecordStep(repo), SeriesStep()]
+    )
+
+    await handler(them_msg(10))
+
+    assert seen == [1, 1, 1]
+    assert active["count"] == 0
+
+
+async def test_echo_of_each_series_part_is_not_answered() -> None:
+    repo = FakeMessageRepo()
+    sender = FakeSender()
+    log_repo = FakeReplyLogRepo()
+    bot = DummyBot(next_message_id=200)
+    resolver = OwnerResolver(bot)
+    resolver.set("bc1", owner_id=OWNER_ID, user_chat_id=OWNER_ID)
+    business_sender = TelegramBusinessSender(bot, repo, resolver)
+    handler = make_router(
+        business_sender,
+        repo,
+        log_repo,
+        [ResolveConfigStep(), RecordStep(repo), SeriesStep()],
+    )
+
+    await handler(them_msg(10))
+
+    assert bot.send_message_calls == 3
+    assert await repo.role_of(1, 200) == "bot"
+    assert await repo.role_of(1, 201) == "bot"
+    assert await repo.role_of(1, 202) == "bot"
+
+    for message_id in (200, 201, 202):
+        await handler(owner_msg(message_id))
+
+    assert bot.send_message_calls == 3
+    assert sender.sent == []
