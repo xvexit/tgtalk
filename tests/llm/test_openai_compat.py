@@ -123,3 +123,40 @@ async def test_timeout_propagates() -> None:
     provider = make_provider(handler)
     with pytest.raises(APITimeoutError):
         await provider.generate("s", [ChatMessage(role="user", content="вопрос")])
+
+
+async def test_temperature_passed_when_configured() -> None:
+    captured = {}
+
+    async def handler(request):
+        captured["body"] = json.loads(request.content)
+        return httpx2.Response(
+            200, request=request, json={"choices": [{"message": {"content": "A"}}]}
+        )
+
+    transport = httpx2.MockTransport(handler)
+    client = httpx2.AsyncClient(transport=transport)
+    provider = OpenAICompatProvider(
+        api_key="test-key",
+        base_url="https://example.com/v1",
+        model="test-model",
+        timeout=5.0,
+        http_client=client,
+        temperature=0.0,
+    )
+    await provider.generate("s", [ChatMessage(role="user", content="вопрос")])
+    assert captured["body"]["temperature"] == 0.0
+
+
+async def test_temperature_omitted_by_default() -> None:
+    captured = {}
+
+    async def handler(request):
+        captured["body"] = json.loads(request.content)
+        return httpx2.Response(
+            200, request=request, json={"choices": [{"message": {"content": "A"}}]}
+        )
+
+    provider = make_provider(handler)
+    await provider.generate("s", [ChatMessage(role="user", content="вопрос")])
+    assert "temperature" not in captured["body"]

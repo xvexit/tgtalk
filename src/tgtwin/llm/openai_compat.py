@@ -21,10 +21,12 @@ class OpenAICompatProvider(LLMProvider):
         http_client: Any | None = None,
         max_tokens: int = 800,
         thinking_enabled: bool = False,
+        temperature: float | None = None,
     ) -> None:
         self.model = model
         self.max_tokens = max_tokens
         self.thinking_enabled = thinking_enabled
+        self.temperature = temperature
         self.last_finish_reason: str | None = None
         self.client = AsyncOpenAI(
             api_key=api_key,
@@ -41,12 +43,15 @@ class OpenAICompatProvider(LLMProvider):
         extra_body = None
         if not self.thinking_enabled:
             extra_body = {"thinking": {"type": "disabled"}}
-        resp = await self.client.chat.completions.create(
-            model=self.model,
-            messages=payload,
-            max_tokens=self.max_tokens,
-            extra_body=extra_body,
-        )
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": payload,
+            "max_tokens": self.max_tokens,
+            "extra_body": extra_body,
+        }
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
+        resp = await self.client.chat.completions.create(**kwargs)
         choice = resp.choices[0]
         self.last_finish_reason = getattr(choice, "finish_reason", None)
         return choice.message.content
