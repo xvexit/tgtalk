@@ -53,10 +53,25 @@ def test_masks_links_nicks_and_long_numbers() -> None:
 
     assert "<ссылка>" in masked
     assert "<ник>" in masked
-    assert "<число>" in masked
+    assert "<телефон>" in masked
     assert "example.com" not in masked
     assert "@nick" not in masked
     assert "123456789" not in masked
+
+
+def test_masks_each_sensitive_kind() -> None:
+    assert mask_text("почта ivan.petrov+tag@example.co.uk") == "почта <почта>"
+    assert (
+        mask_text("vless://123e4567-e89b-12d3-a456-426614174000@example.com:443#node")
+        == "<ссылка>"
+    )
+    assert mask_text("ftp://example.com/file") == "<ссылка>"
+    assert mask_text("10.20.30.40") == "<ip>"
+    assert mask_text("123e4567-e89b-12d3-a456-426614174000") == "<uuid>"
+    assert mask_text("AKIAIOSFODNN7EXAMPLE") == "<токен>"
+    assert mask_text("+7 (999) 123-45-67") == "<телефон>"
+    assert mask_text("123456") == "<число>"
+    assert mask_text("12345") == "12345"
 
 
 def test_extract_emojis_skips_skin_tone_and_joiner() -> None:
@@ -102,35 +117,39 @@ def test_owner_series_lengths() -> None:
     assert owner_series_lengths(messages) == [2, 1, 1]
 
 
-def test_select_samples_is_deterministic_and_masked() -> None:
+def test_select_samples_is_deterministic_and_skips_masked() -> None:
     messages = [
-        _msg(i, "owner", f"текст {i} https://example.com/{i}", offset=i)
+        _msg(i, "owner", f"текст {i}", offset=i)
         for i in range(200)
     ]
+    messages.extend(
+        _msg(1000 + i, "owner", f"текст {i} https://example.com/{i}", offset=1000 + i)
+        for i in range(20)
+    )
 
     first = select_samples(messages, limit=120, max_len=160, seed=42)
     second = select_samples(messages, limit=120, max_len=160, seed=42)
 
     assert len(first) == 120
     assert first == second
-    assert all("<ссылка>" in m.text for m in first)
+    assert all("<" not in m.text for m in first)
+    assert all("https://" not in m.text for m in first)
     assert all(len(m.text) <= 160 for m in first)
 
 
-def test_select_pairs_is_deterministic_and_masked() -> None:
+def test_select_pairs_is_deterministic_and_skips_masked() -> None:
     messages = [
-        _msg(1, "them", "Скинь https://example.com @nick", offset=0),
-        _msg(2, "owner", "ок 123456789", offset=1),
-        _msg(3, "them", "как дела", offset=2),
-        _msg(4, "owner", "норм", offset=3),
-        _msg(5, "owner", "лишнее", offset=4),
+        _msg(1, "them", "как дела", offset=0),
+        _msg(2, "owner", "норм", offset=1),
+        _msg(3, "them", "Скинь https://example.com @nick", offset=2),
+        _msg(4, "owner", "ок", offset=3),
+        _msg(5, "them", "ещё", offset=4),
+        _msg(6, "owner", "ахаха 123456789", offset=5),
     ]
 
     pairs = select_pairs(messages, limit=25, seed=42)
 
-    assert len(pairs) == 2
-    assert pairs[0][0] == "Скинь <ссылка> <ник>"
-    assert pairs[0][1] == "ок <число>"
+    assert pairs == [("как дела", "норм")]
 
 
 def test_build_style_stats() -> None:

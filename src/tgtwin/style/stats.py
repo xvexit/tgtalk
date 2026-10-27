@@ -10,10 +10,22 @@ from dataclasses import dataclass
 from datetime import datetime
 
 URL_PATTERN = re.compile(r"(?i)\b(?:https?://|www\.)\S+")
+URI_PATTERN = re.compile(r"\w+://\S+")
+EMAIL_PATTERN = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 TELEGRAM_LINK_PATTERN = re.compile(r"(?i)\b(?:t\.me|telegram\.me)/\S+")
 MENTION_PATTERN = re.compile(r"(?<![\w@])@[A-Za-z0-9_]{3,}")
+IPV4_PATTERN = re.compile(
+    r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b"
+)
+UUID_PATTERN = re.compile(
+    r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+)
+PHONE_PATTERN = re.compile(r"(?<!\w)\+?\d[\d\s().-]{5,}\d(?!\w)")
+LONG_TOKEN_PATTERN = re.compile(
+    r"(?<!\w)(?=[A-Za-z0-9_=-]{20,}(?!\w))(?=[A-Za-z0-9_=-]*[A-Za-z_=-])[A-Za-z0-9_=-]{20,}(?!\w)"
+)
 LONG_NUMBER_PATTERN = re.compile(r"\d{6,}")
-MASK_PATTERN = re.compile(r"<(?:ссылка|ник|число)>")
+MASK_PATTERN = re.compile(r"<(?:ссылка|почта|ip|uuid|токен|телефон|ник|число)>")
 WORD_PATTERN = re.compile(r"[a-zа-яё]+")
 LAUGHTER_PATTERN = re.compile(
     r"(?i)(?:[аa]?[хx]+[аa]+[хx]*|[хx][аa]+[хx]+|[хx][еe]+[хx]+|кек+|лол+|\){2,})"
@@ -83,10 +95,23 @@ def percentile(values: Sequence[float], q: float) -> float | None:
 
 
 def mask_text(text: str) -> str:
-    masked = URL_PATTERN.sub("<ссылка>", text)
+    masked = URI_PATTERN.sub("<ссылка>", text)
+    masked = EMAIL_PATTERN.sub("<почта>", masked)
+    masked = UUID_PATTERN.sub("<uuid>", masked)
+    masked = IPV4_PATTERN.sub("<ip>", masked)
+    masked = PHONE_PATTERN.sub(_mask_phone, masked)
+    masked = URL_PATTERN.sub("<ссылка>", masked)
     masked = TELEGRAM_LINK_PATTERN.sub("<ссылка>", masked)
     masked = MENTION_PATTERN.sub("<ник>", masked)
+    masked = LONG_TOKEN_PATTERN.sub("<токен>", masked)
     return LONG_NUMBER_PATTERN.sub("<число>", masked)
+
+
+def _mask_phone(match: re.Match[str]) -> str:
+    value = match.group(0)
+    digits = sum(char.isdigit() for char in value)
+    has_separator = any(char in "+().-" or char.isspace() for char in value)
+    return "<телефон>" if digits >= 7 and has_separator else value
 
 
 def extract_emojis(text: str) -> list[str]:
@@ -159,8 +184,10 @@ def select_samples(
     for message in _ordered(messages):
         if message.role != "owner":
             continue
-        text = mask_text(normalize_text(message.text))
-        if 0 < len(text) <= max_len:
+        text = normalize_text(message.text)
+        if not text or mask_text(text) != text:
+            continue
+        if len(text) <= max_len:
             candidates.append(
                 StyleMessage(
                     chat_id=message.chat_id,
@@ -189,13 +216,15 @@ def select_pairs(
     for chat_id in sorted(grouped):
         ordered = sorted(grouped[chat_id], key=lambda item: (item.ts, item.message_id))
         for first, second in zip(ordered, ordered[1:]):
-            if first.role == "them" and second.role == "owner":
-                candidates.append(
-                    (
-                        mask_text(normalize_text(first.text)),
-                        mask_text(normalize_text(second.text)),
-                    )
-                )
+            if first.role != "them" or second.role != "owner":
+                continue
+            first_text = normalize_text(first.text)
+            second_text = normalize_text(second.text)
+            if not first_text or not second_text:
+                continue
+            if mask_text(first_text) != first_text or mask_text(second_text) != second_text:
+                continue
+            candidates.append((first_text, second_text))
 
     rng = random.Random(seed)
     indices = sorted(rng.sample(range(len(candidates)), min(limit, len(candidates))))

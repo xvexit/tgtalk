@@ -33,12 +33,12 @@ def test_report_masks_sensitive_values() -> None:
         generated_at=datetime(2026, 10, 26, tzinfo=UTC),
     )
 
-    assert "<ссылка>" in report
-    assert "<ник>" in report
-    assert "<число>" in report
     assert "secret.example" not in report
     assert "@nick" not in report
     assert "123456789" not in report
+    assert "<ссылка>" not in report
+    assert "<ник>" not in report
+    assert "<число>" not in report
     assert "Медиана длины" in report
     assert "Частые слова" in report
     assert "Примеры" in report
